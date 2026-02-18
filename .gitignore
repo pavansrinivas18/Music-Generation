@@ -1,3 +1,11 @@
-models/X_midi.npy
+# Ignore ML data & models
 models/
+data/
 *.npy
+*.h5
+*.pt
+*.pth
+
+# Python
+__pycache__/
+.venv/
