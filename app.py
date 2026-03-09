@@ -10,9 +10,6 @@ from music21 import stream, note
 # -------------------------------------------------
 st.set_page_config(page_title="AI Text-to-Music", layout="centered")
 
-# -------------------------------------------------
-# Custom Styling (Lovable-style Dark Theme)
-# -------------------------------------------------
 st.markdown("""
 <style>
 body {
@@ -61,7 +58,7 @@ h1 {
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------
-# Load Assets (cached so reload is fast)
+# Load Assets
 # -------------------------------------------------
 @st.cache_resource
 def load_assets():
@@ -85,23 +82,41 @@ def load_assets():
 text_model, midi_model, tokenizer, genre_encoder, int_to_note, X_midi = load_assets()
 
 # -------------------------------------------------
-# Genre Prediction (UNCHANGED from your project)
+# Genre Prediction
 # -------------------------------------------------
 def predict_genre(text):
+    text = text.lower()
+
+    # Keyword-based detection for reliable genre prediction
+    if "rock" in text:
+        return "Rock"
+    elif "jazz" in text:
+        return "Jazz"
+    elif "classical" in text:
+        return "Classical"
+    elif "edm" in text or "electronic" in text:
+        return "EDM"
+    elif "hip hop" in text or "hip-hop" in text or "rap" in text:
+        return "Hip-Hop"
+    elif "ambient" in text or "relaxing" in text:
+        return "Ambient"
+
+    # Fallback to trained model if no keyword found
     seq = tokenizer.texts_to_sequences([text])
     padded = pad_sequences(seq, maxlen=50)
     pred = text_model.predict(padded, verbose=0)
+
     return genre_encoder.inverse_transform([np.argmax(pred)])[0]
 
 # -------------------------------------------------
-# Same Seed Selection Logic
+# Seed Selection
 # -------------------------------------------------
 def get_seed():
     idx = np.random.randint(0, len(X_midi))
     return X_midi[idx].reshape(1, X_midi.shape[1], 1)
 
 # -------------------------------------------------
-# Same Music Generation Logic
+# Music Generation
 # -------------------------------------------------
 def generate_music(seed, length=300):
     pattern = seed.copy()
@@ -116,9 +131,9 @@ def generate_music(seed, length=300):
     return generated
 
 # -------------------------------------------------
-# Save MIDI (same logic)
+# Save MIDI
 # -------------------------------------------------
-def save_midi(notes, filename="output.mid"):
+def save_midi(notes, filename):
     midi_stream = stream.Stream()
 
     for n in notes:
@@ -147,15 +162,22 @@ if st.button("✨ Generate Music"):
         genre = predict_genre(user_input)
         seed = get_seed()
         notes = generate_music(seed)
-        save_midi(notes)
 
-    # Result Card
+        filename = f"generated_{genre}.mid"
+        save_midi(notes, filename)
+
     st.markdown('<div class="result-card">', unsafe_allow_html=True)
 
     st.markdown("**Predicted Genre**")
     st.markdown(f'<span class="genre-badge">{genre}</span>', unsafe_allow_html=True)
 
-    st.audio("output.mid")
-    st.download_button("⬇ Download MIDI", open("output.mid", "rb"), file_name="generated.mid")
+    # Download only (no audio player)
+    with open(filename, "rb") as file:
+        st.download_button(
+            "⬇ Download Generated MIDI",
+            data=file,
+            file_name=filename,
+            mime="audio/midi"
+        )
 
     st.markdown("</div>", unsafe_allow_html=True)
